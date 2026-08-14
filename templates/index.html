@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDA Medication Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: radial-gradient(circle at 20% 20%, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            padding: 16px;
+            color: #e8eaf6;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            animation: fadeSlideDown 0.6s ease both;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 6px;
+            background: linear-gradient(90deg, #6a8dff, #9b6bff, #ff6b9b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1em;
+            color: #b0b8d4;
+        }
+
+        .search-card {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            margin-bottom: 24px;
+            animation: fadeSlideUp 0.6s ease 0.1s both;
+        }
+
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .form-group.full {
+            flex-direction: column;
+        }
+
+        input[type="text"],
+        select {
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #e8eaf6;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            font-size: 0.95em;
+            transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #6a8dff;
+            box-shadow: 0 0 0 3px rgba(106, 141, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        select {
+            min-width: 150px;
+            cursor: pointer;
+            color-scheme: dark;
+        }
+
+        select option {
+            background: #24243e;
+            color: #e8eaf6;
+        }
+
+        button {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #6a8dff, #9b59c4);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.3s, filter 0.3s;
+            box-shadow: 0 4px 20px rgba(106, 141, 255, 0.3);
+        }
+
+        button:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 6px 30px rgba(106, 141, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 16px;
+            color: #6a8dff;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #6a8dff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(255, 80, 80, 0.15);
+            color: #ff8a8a;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 80, 80, 0.3);
+            display: none;
+            animation: fadeSlideDown 0.3s ease both;
+        }
+
+        .success-message {
+            background: rgba(80, 200, 120, 0.15);
+            color: #8aff9b;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(80, 200, 120, 0.3);
+            display: none;
+            animation: fadeSlideDown 0.3s ease both;
+        }
+
+        .results-container {
+            display: none;
+        }
+
+        .results-header {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 14px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            animation: fadeSlideUp 0.4s ease both;
+        }
+
+        .results-header h2 {
+            color: #e8eaf6;
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        .results-count {
+            color: #a0b8d4;
+            font-size: 0.85em;
+        }
+
+        .medication-card {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            animation: fadeSlideUp 0.4s ease both;
+        }
+
+        .medication-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(106, 141, 255, 0.4);
+            box-shadow: 0 12px 40px rgba(106, 141, 255, 0.25);
+        }
+
+        .medication-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .medication-name {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .strength-info {
+            font-size: 0.9em;
+            color: #6a8dff;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .strength-info strong {
+            color: #9b59cf;
+            font-weight: 700;
+        }
+
+        .ndc-badge {
+            background: linear-gradient(135deg, #6a8dff, #9b59cf);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            box-shadow: 0 2px 10px rgba(106, 141, 255, 0.3);
+        }
+
+        .medication-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .detail-row {
+            border-left: 3px solid #6a8dff;
+            padding-left: 10px;
+        }
+
+        .detail-label {
+            color: #a0a8c4;
+            font-size: 0.8em;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            color: #e8eaf6;
+            font-size: 0.98em;
+            margin-top: 3px;
+            word-break: break-word;
+        }
+
+        .manufacturer-logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
+            vertical-align: middle;
+            margin-right: 12px;
+            object-fit: contain;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px;
+            transition: transform 0.3s ease;
+        }
+
+        .manufacturer-logo:hover {
+            transform: scale(1.08) rotate(-2deg);
+        }
+
+        .manufacturer-logo-fallback {
+            font-size: 2.2em;
+            margin-right: 12px;
+            vertical-align: middle;
+        }
+
+        .no-results {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3);
+            color: #a0b8d4;
+            animation: fadeSlideUp 0.4s ease both;
+        }
+
+        .pricing-section {
+            margin-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            padding-top: 16px;
+        }
+
+        .pricing-header {
+            font-weight: 600;
+            color: #6a8dff;
+            margin-bottom: 12px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .price-comparison {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .price-comparison > * {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-bottom: 0;
+        }
+
+        .price-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 3px solid #6a8dff;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            transition: background 0.3s, border-color 0.3s, transform 0.2s;
+        }
+
+        .price-card:hover {
+            background: rgba(106, 141, 255, 0.1);
+            border-color: rgba(106, 141, 255, 0.4);
+            transform: scale(1.02);
+        }
+
+        .price-card-name {
+            font-weight: 600;
+            color: #e8eaf6;
+            margin-bottom: 4px;
+        }
+
+        .price-card-value {
+            color: #6a8dff;
+            font-size: 1.05em;
+            font-weight: 700;
+        }
+
+        .goodrx-box {
+            background: linear-gradient(135deg, rgba(106, 141, 255, 0.15), rgba(155, 89, 207, 0.15));
+            border: 1px solid rgba(106, 141, 255, 0.3);
+            color: white;
+            padding: 14px;
+            border-radius: 12px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .goodrx-box:hover {
+            border-color: rgba(106, 141, 255, 0.5);
+            box-shadow: 0 4px 20px rgba(106, 141, 255, 0.2);
+        }
+
+        .goodrx-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 0.9em;
+            color: #a0b8d4;
+        }
+
+        .goodrx-price {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 4px;
+            background: linear-gradient(90deg, #6a8dff, #9b59cf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .goodrx-savings {
+            font-size: 0.85em;
+            color: #a0d8a4;
+            margin-bottom: 8px;
+        }
+
+        .pharmacy-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .pharmacy-link {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            color: #a0c8ff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.82em;
+            font-weight: 500;
+            transition: transform 0.2s, background 0.3s, box-shadow 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .pharmacy-link:hover {
+            transform: translateY(-2px);
+            background: rgba(106, 141, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(106, 141, 255, 0.3);
+        }
+
+        .pricing-disclaimer {
+            font-size: 0.75em;
+            color: #8088a4;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeSlideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.4em;
+            }
+
+            .search-card {
+                padding: 16px;
+            }
+
+            .form-group {
+                flex-direction: column;
+            }
+
+            input[type="text"] {
+                min-width: 100%;
+            }
+
+            .medication-details {
+                grid-template-columns: 1fr;
+            }
+
+            .medication-header {
+                flex-direction: column;
+            }
+
+            .price-comparison {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💊 FDA Medication Search</h1>
+            <p>Search for medications by name or NDC code</p>
+        </div>
+
+        <div class="search-card">
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <form class="search-form" id="searchForm">
+                <div class="form-group">
+                    <input 
+                        type="text" 
+                        id="searchTerm" 
+                        placeholder="Enter medication name or NDC code..."
+                        autocomplete="off"
+                        required
+                    />
+                    <select id="searchType">
+                        <option value="generic_name">Generic Name</option>
+                        <option value="brand_name">Brand Name</option>
+                        <option value="ndc">NDC Code</option>
+                    </select>
+                </div>
+                <button type="submit">Search Medications</button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Searching for medications...</p>
+            </div>
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <div class="results-header">
+                <h2>Search Results</h2>
+                <p class="results-count" id="resultsCount"></p>
+            </div>
+            <div id="resultsList"></div>
+        </div>
+    </div>
+
+    <script>
+        const searchForm = document.getElementById("searchForm");
+        const searchTerm = document.getElementById("searchTerm");
+        const searchType = document.getElementById("searchType");
+        const loading = document.getElementById("loading");
+        const errorMessage = document.getElementById("errorMessage");
+        const successMessage = document.getElementById("successMessage");
+        const resultsContainer = document.getElementById("resultsContainer");
+        const resultsList = document.getElementById("resultsList");
+        const resultsCount = document.getElementById("resultsCount");
+
+        searchForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const term = searchTerm.value.trim();
+            if (!term) {
+                showError("Please enter a search term");
+                return;
+            }
+
+            await performSearch(term, searchType.value);
+        });
+
+        async function performSearch(term, type) {
+            loading.style.display = "block";
+            errorMessage.style.display = "none";
+            successMessage.style.display = "none";
+            resultsContainer.style.display = "none";
+
+            try {
+                const response = await fetch("/api/search", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        search_term: term,
+                        search_type: type
+                    })
+                });
+
+                const data = await response.json();
+                loading.style.display = "none";
+
+                if (data.success !== false) {
+                    // Even if count is 0, success:true means we should display results
+                    displayResults(data);
+                } else {
+                    // Only show error if success is explicitly false
+                    showError(data.error || "An error occurred while searching");
+                }
+            } catch (error) {
+                loading.style.display = "none";
+                showError("Failed to search. Please try again later.");
+                console.error("Search error:", error);
+            }
+        }
+
+        function displayResults(data) {
+            resultsContainer.style.display = "block";
+            const message = data.message || `Found ${data.count} result${data.count !== 1 ? 's' : ''}`;
+            resultsCount.textContent = message;
+
+            if (data.count === 0) {
+                resultsList.innerHTML = `
+                    <div class="no-results">
+                        <p>${message}</p>
+                        <p style="font-size: 0.9em; margin-top: 10px; color: #8088a4;">
+                            Tips: Check spelling, try generic names instead of brand names, 
+                            or search for different medications.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            resultsList.innerHTML = data.results.map(med => formatMedicationCard(med)).join("");
+        }
+
+        // Stagger the card animations for a smoother reveal
+        function animateResults() {
+            const cards = document.querySelectorAll(".medication-card");
+            cards.forEach((card, i) => {
+                card.style.animationDelay = `${i * 0.05}s`;
+            });
+        }
+
+        function formatMedicationCard(med) {
+            const pricing = med.pricing || {};
+            
+            const pricingHtml = pricing && pricing.pharmacies ? `
+                <div class="pricing-section">
+                    <div class="pricing-header">💰 Estimated Pricing</div>
+                    <div class="price-comparison">
+                        <div class="pricing-grid">
+                            ${Object.entries(pricing.pharmacies).map(([key, pharmacy]) => `
+                                <div class="price-card">
+                                    <div class="price-card-name">${escapeHtml(pharmacy.name)}</div>
+                                    <div class="price-card-value">$${pharmacy.estimated_price.toFixed(2)}</div>
+                                    <a href="${pharmacy.link}" target="_blank" class="pharmacy-link" style="display: inline-block; font-size: 0.8em; margin-top: 4px; color: #a0c8ff; text-decoration: none;">Check Price →</a>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="goodrx-box">
+                            <div class="goodrx-title">💊 GoodRx Estimate</div>
+                            <div class="goodrx-price">$${pricing.goodrx.estimated_goodrx_price.toFixed(2)}</div>
+                            <div class="goodrx-savings">Save ~$${pricing.goodrx.estimated_savings.toFixed(2)} (${pricing.goodrx.savings_percentage}% off)</div>
+                            <div class="pharmacy-links">
+                                <a href="${pricing.goodrx.link}" target="_blank" class="pharmacy-link">View GoodRx Prices</a>
+                            </div>
+                            <div style="font-size: 0.85em; margin-top: 8px; opacity: 0.9; color: #a0b8d4;">
+                                ${escapeHtml(pricing.goodrx.note)}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pricing-disclaimer">
+                        ${escapeHtml(pricing.disclaimer)}
+                    </div>
+                </div>
+            ` : '';
+            
+            return `
+                <div class="medication-card" style="animation-delay: 0s;">
+                    <div class="medication-header">
+                        <div>
+                            <div class="medication-name">${escapeHtml(med.generic_name || med.brand_name || "Unknown")}</div>
+                            ${med.active_ingredients && med.active_ingredients.length > 0 ? `
+                                <div class="strength-info">
+                                    ${med.active_ingredients.map(ing => `${escapeHtml(ing.name || "")}${ing.strength ? " <strong>" + escapeHtml(ing.strength) + "</strong>" : ""}`).join(" + ")}
+                                </div>
+                            ` : ""}
+                        </div>
+                        ${med.full_ndc ? `<div class="ndc-badge">NDC: ${escapeHtml(med.full_ndc)}</div>` : (med.product_ndc ? `<div class="ndc-badge">NDC: ${escapeHtml(med.product_ndc)}</div>` : "")}
+                    </div>
+                    <div class="medication-details">
+                        ${med.brand_name ? `
+                            <div class="detail-row">
+                                <div class="detail-label">Brand Name</div>
+                                <div class="detail-value">${escapeHtml(med.brand_name)}</div>
+                            </div>
+                        ` : ""}
+                        ${med.generic_name ? `
+                            <div class="detail-row">
+                                <div class="detail-label">Generic Name</div>
+                                <div class="detail-value">${escapeHtml(med.generic_name)}</div>
+                            </div>
+                        ` : ""}
+                        ${med.dosage_form ? `
+                            <div class="detail-row">
+                                <div class="detail-label">Dosage Form</div>
+                                <div class="detail-value">${escapeHtml(med.dosage_form)}</div>
+                            </div>
+                        ` : ""}
+                        ${med.labeler_name ? `
+                            <div class="detail-row">
+                                <div class="detail-label">Manufacturer</div>
+                                <div class="detail-value">
+                                    ${med.manufacturer_logo ? `
+                                        <img 
+                                            class="manufacturer-logo" 
+                                            src="${escapeHtmlAttr(med.manufacturer_logo)}" 
+                                            alt="${escapeHtml(med.labeler_name)} logo"
+                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
+                                        />
+                                        <span class="manufacturer-logo-fallback" style="display:none;">🏭</span>
+                                    ` : `<span class="manufacturer-logo-fallback">🏭</span>`}
+                                    ${escapeHtml(med.labeler_name)}
+                                </div>
+                            </div>
+                        ` : ""}
+                        ${med.route ? `
+                            <div class="detail-row">
+                                <div class="detail-label">Route</div>
+                                <div class="detail-value">${med.route.join(", ")}</div>
+                            </div>
+                        ` : ""}
+                    </div>
+                    ${pricingHtml}
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = "block";
+            resultsContainer.style.display = "none";
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeHtmlAttr(text) {
+            return text.replace(/"/g, '&#34;').replace(/'/g, '&#39;');
+        }
+
+        // Focus on search input on load
+        searchTerm.focus();
+
+        // Add staggered animation after results render
+        const observer = new MutationObserver(() => {
+            animateResults();
+        });
+        observer.observe(resultsList, { childList: true });
+    </script>
+</body>
+</html>

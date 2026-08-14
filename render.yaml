@@ -1,0 +1,16 @@
+# Render blueprint for one-click free deployment
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: fda-medication-search
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    healthCheckPath: /
+    envVars:
+      - key: DEBUG
+        value: "false"
+      - key: PYTHON_VERSION
+        value: "3.12.1"
